@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '/scteens/models/technician_model.dart';
+import '../../models/technician_model.dart';
 import 'technicians_data.dart';
 import 'districts_screen.dart';
 

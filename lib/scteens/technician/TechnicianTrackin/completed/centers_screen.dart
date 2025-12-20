@@ -1,22 +1,24 @@
 import 'package:flutter/material.dart';
-import 'completed_order.dart';
+import '../../../models/order_model.dart';
+import 'completed_order.dart'; // For stats models
 import 'completed_orderss_screen.dart';
 
 class CentersScreen extends StatelessWidget {
   final String governorate;
-  final List<CompletedOrder> orders;
+  final List<OrderModel> orders;
 
   CentersScreen({required this.governorate, required this.orders});
 
   // تجميع الطلبات حسب المركز
-  Map<String, List<CompletedOrder>> _groupOrdersByCenter() {
-    Map<String, List<CompletedOrder>> centerOrders = {};
+  Map<String, List<OrderModel>> _groupOrdersByCenter() {
+    Map<String, List<OrderModel>> centerOrders = {};
 
     for (var order in orders) {
-      if (!centerOrders.containsKey(order.center)) {
-        centerOrders[order.center] = [];
+      String center = order.areaName ?? "غير محدد";
+      if (!centerOrders.containsKey(center)) {
+        centerOrders[center] = [];
       }
-      centerOrders[order.center]!.add(order);
+      centerOrders[center]!.add(order);
     }
 
     return centerOrders;
@@ -30,10 +32,9 @@ class CentersScreen extends StatelessWidget {
     centerOrders.forEach((center, orders) {
       int totalOrders = orders.length;
       double totalRevenue =
-          orders.fold(0.0, (double sum, order) => sum + order.price);
-      double totalRating =
-          orders.fold(0.0, (double sum, order) => sum + order.rating);
-      double averageRating = totalOrders > 0 ? totalRating / totalOrders : 0.0;
+          orders.fold(0.0, (double sum, order) => sum + (order.price ?? 0));
+      
+      double averageRating = 5.0; // Placeholder
 
       stats[center] = CenterStats(
         center: center,

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '/scteens/technicians/technician_profile.dart';
+import '../../../technicians/technician_profile.dart';
 import 'rejected_order.dart';
 
 class RejectionAnalyticsScreen extends StatelessWidget {

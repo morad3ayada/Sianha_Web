@@ -45,12 +45,14 @@ class CompletedOrdersScreen extends StatelessWidget {
       double totalRevenue =
           orders.fold(0.0, (double sum, order) => sum + (order.price ?? 0));
       
-      // Placeholder for rating since it's not in OrderModel yet
+      // Note: Rating is usually not in OrderModel, providing default or check if available
       double averageRating = 5.0; 
 
       Map<String, int> serviceDistribution = {};
-      // Placeholder logic for service type
-      serviceDistribution['General'] = totalOrders;
+      for (var order in orders) {
+        String service = order.serviceCategoryName ?? 'Unknown';
+        serviceDistribution[service] = (serviceDistribution[service] ?? 0) + 1;
+      }
 
       stats[governorate] = GovernorateStats(
         governorate: governorate,
@@ -74,16 +76,6 @@ class CompletedOrdersScreen extends StatelessWidget {
         title: Text('العمليات المنجزة - المحافظات',
             style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
         backgroundColor: Colors.green[700],
-        actions: [
-          IconButton(
-            icon: Icon(Icons.analytics, color: Colors.white),
-            onPressed: () {
-              // Note: AdvancedStatsScreen also needs update, passing empty map for now to avoid break or you can comment it out
-              // Navigator.push(...) 
-            },
-            tooltip: 'الإحصائيات المتقدمة',
-          ),
-        ],
       ),
       body: governorateStats.isEmpty
           ? Center(
@@ -134,7 +126,17 @@ class CompletedOrdersScreen extends StatelessWidget {
                           ),
                           trailing: Icon(Icons.arrow_forward_ios, size: 16),
                           onTap: () {
-                            // Navigate to details if needed
+                            // Filter orders for this governorate
+                            final govOrders = allOrders.where((o) => o.governorateName == governorate).toList();
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => CentersScreen(
+                                  governorate: governorate,
+                                  orders: govOrders,
+                                ),
+                              ),
+                            );
                           },
                         ),
                       );

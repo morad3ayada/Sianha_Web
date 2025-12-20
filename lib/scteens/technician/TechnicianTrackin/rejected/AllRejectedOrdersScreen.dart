@@ -1,16 +1,21 @@
 import 'package:flutter/material.dart';
-import '/scteens/technicians/technician_profile.dart';
-import 'rejected_order.dart';
+import '../../../../scteens/technicians/technician_profile.dart';
+import '../../../models/order_model.dart';
+import 'rejected_order.dart'; // Keep for now if used elsewhere, but we might remove it
 
 class AllRejectedOrdersScreen extends StatefulWidget {
+  final List<OrderModel> orders;
+
+  AllRejectedOrdersScreen({required this.orders});
+
   @override
   _AllRejectedOrdersScreenState createState() =>
       _AllRejectedOrdersScreenState();
 }
 
 class _AllRejectedOrdersScreenState extends State<AllRejectedOrdersScreen> {
-  List<RejectedOrder> rejectedOrders = [];
-  List<RejectedOrder> filteredOrders = [];
+  List<OrderModel> rejectedOrders = [];
+  List<OrderModel> filteredOrders = [];
   String? selectedServiceType;
   String? selectedGovernorate;
 
@@ -34,50 +39,7 @@ class _AllRejectedOrdersScreenState extends State<AllRejectedOrdersScreen> {
   }
 
   void _loadRejectedOrders() {
-    rejectedOrders = [
-      RejectedOrder(
-        id: '1',
-        serviceType: 'كهرباء',
-        customerName: 'أحمد محمد',
-        customerPhone: '01234567891',
-        address: 'شارع النصر - حي الزهور',
-        governorate: 'سوهاج',
-        center: 'مركز سوهاج',
-        rejectionReason: 'عدم توفر قطع غيار',
-        rejectionDate: DateTime.now().subtract(Duration(days: 1)),
-        requestDate: DateTime.now().subtract(Duration(days: 3)),
-        technicianId: 'tech001',
-        technicianName: 'محمد علي',
-      ),
-      RejectedOrder(
-        id: '2',
-        serviceType: 'سباكة',
-        customerName: 'فاطمة إبراهيم',
-        customerPhone: '01234567892',
-        address: 'شارع الجمهورية',
-        governorate: 'سوهاج',
-        center: 'مركز جهينة',
-        rejectionReason: 'المكان بعيد',
-        rejectionDate: DateTime.now().subtract(Duration(days: 2)),
-        requestDate: DateTime.now().subtract(Duration(days: 4)),
-        technicianId: 'tech002',
-        technicianName: 'خالد محمود',
-      ),
-      RejectedOrder(
-        id: '3',
-        serviceType: 'صيانة موبايل',
-        customerName: 'محمود عبدالله',
-        customerPhone: '01234567893',
-        address: 'حي الكوثر',
-        governorate: 'القاهرة',
-        center: 'مركز مصر الجديدة',
-        rejectionReason: 'التكلفة مرتفعة',
-        rejectionDate: DateTime.now().subtract(Duration(days: 3)),
-        requestDate: DateTime.now().subtract(Duration(days: 5)),
-        technicianId: 'tech003',
-        technicianName: 'ياسر محمد',
-      ),
-    ];
+    rejectedOrders = widget.orders;
     filteredOrders = rejectedOrders;
   }
 
@@ -85,9 +47,9 @@ class _AllRejectedOrdersScreenState extends State<AllRejectedOrdersScreen> {
     setState(() {
       filteredOrders = rejectedOrders.where((order) {
         bool serviceMatch = selectedServiceType == null ||
-            order.serviceType == selectedServiceType;
+            order.serviceCategoryName == selectedServiceType;
         bool governorateMatch = selectedGovernorate == null ||
-            order.governorate == selectedGovernorate;
+            order.governorateName == selectedGovernorate;
         return serviceMatch && governorateMatch;
       }).toList();
     });
@@ -151,7 +113,7 @@ class _AllRejectedOrdersScreenState extends State<AllRejectedOrdersScreen> {
   }
 
   List<String> _getUniqueGovernorates() {
-    return rejectedOrders.map((order) => order.governorate).toSet().toList();
+    return rejectedOrders.map((order) => order.governorateName ?? "N/A").toSet().toList();
   }
 
   Widget _buildServiceIcon(String serviceType) {
@@ -194,63 +156,26 @@ class _AllRejectedOrdersScreenState extends State<AllRejectedOrdersScreen> {
     return '${date.day}/${date.month}/${date.year}';
   }
 
-  void _navigateToTechnicianProfile(String technicianId) {
-    try {
-      // البحث عن الطلب المطابق لـ technicianId
-      RejectedOrder? order = rejectedOrders.cast<RejectedOrder?>().firstWhere(
-            (o) => o!.technicianId == technicianId,
-            orElse: () => null, // إرجاع null إذا لم يتم العثور على طلب مطابق
-          );
-
-      if (order == null) {
-        // إذا لم يتم العثور على طلب، اعرض رسالة خطأ مناسبة
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('لا يمكن العثور على تفاصيل الطلب للفني المطلوب.'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-        return;
-      }
-
-      // إنشاء بيانات الفني بناءً على تفاصيل الطلب الموجودة
-      Map<String, dynamic> technicianData = {
-        'id': order.technicianId,
-        'name': order.technicianName,
-        'phone': '01012345678', // بيانات افتراضية
-        'email':
-            '${order.technicianName.replaceAll(' ', '.').toLowerCase()}@example.com',
-        'specialization': order.serviceType,
-        'governorate': order.governorate,
-        'center': order.center,
-        'experience': '5 سنوات', // بيانات افتراضية
-        'rating': '4.5', // بيانات افتراضية
-        'completedOrders': '120', // بيانات افتراضية
-        'rejectedOrders': '8', // بيانات افتراضية
-        'joinDate': '2020-03-15', // بيانات افتراضية
-      };
-
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => TechnicianProfile(
-            userId: order.technicianId,
-            technicianId: order.technicianId,
-          ),
-        ),
-      );
-    } catch (e) {
-      // في حالة وجود خطأ آخر غير متوقع، نعرض رسالة
+  void _navigateToTechnicianProfile(String? technicianId) {
+    if (technicianId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('حدث خطأ في تحميل بيانات الفني: $e'),
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text('ID الفني غير متوفر')),
       );
+      return;
     }
+    
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => TechnicianProfile(
+          userId: technicianId,
+          technicianId: technicianId,
+        ),
+      ),
+    );
   }
 
-  void _showLocationDialog(RejectedOrder order) {
+  void _showLocationDialog(OrderModel order) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -259,9 +184,9 @@ class _AllRejectedOrdersScreenState extends State<AllRejectedOrdersScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('المحافظة: ${order.governorate}'),
-            Text('المركز: ${order.center}'),
-            Text('العنوان: ${order.address}'),
+            Text('المحافظة: ${order.governorateName ?? "N/A"}'),
+            Text('المركز: ${order.areaName ?? "N/A"}'),
+            Text('العنوان: ${order.address ?? "N/A"}'),
             SizedBox(height: 20),
             Container(
               height: 200,
@@ -303,7 +228,7 @@ class _AllRejectedOrdersScreenState extends State<AllRejectedOrdersScreen> {
     );
   }
 
-  Widget _buildOrderCard(RejectedOrder order) {
+  Widget _buildOrderCard(OrderModel order) {
     return Card(
       margin: EdgeInsets.only(bottom: 12),
       elevation: 3,
@@ -314,16 +239,16 @@ class _AllRejectedOrdersScreenState extends State<AllRejectedOrdersScreen> {
           children: [
             Row(
               children: [
-                _buildServiceIcon(order.serviceType),
+                _buildServiceIcon(order.serviceCategoryName ?? ""),
                 SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(order.serviceType,
+                      Text(order.serviceCategoryName ?? "خدمة غير محددة",
                           style: TextStyle(
                               fontWeight: FontWeight.bold, fontSize: 16)),
-                      Text(order.customerName),
+                      Text(order.customerName ?? "عميل مجهول"),
                     ],
                   ),
                 ),
@@ -336,11 +261,10 @@ class _AllRejectedOrdersScreenState extends State<AllRejectedOrdersScreen> {
             SizedBox(height: 10),
             Divider(),
             SizedBox(height: 10),
-            _buildInfoRow('الهاتف', order.customerPhone),
-            _buildInfoRow('العنوان', '${order.governorate} - ${order.center}'),
-            _buildInfoRow('سبب الرفض', order.rejectionReason),
-            _buildInfoRow('تاريخ الطلب', _formatDate(order.requestDate)),
-            _buildInfoRow('تاريخ الرفض', _formatDate(order.rejectionDate)),
+            _buildInfoRow('الهاتف', order.customerPhoneNumber ?? "غير متوفر"),
+            _buildInfoRow('العنوان', '${order.governorateName ?? ""} - ${order.areaName ?? ""}'),
+            _buildInfoRow('الوصف', order.problemDescription ?? "لا يوجد وصف"),
+            _buildInfoRow('تاريخ الطلب', order.createdAt ?? "غير محدد"),
             SizedBox(height: 10),
             Row(
               children: [
@@ -349,7 +273,7 @@ class _AllRejectedOrdersScreenState extends State<AllRejectedOrdersScreen> {
                     icon: Icon(Icons.person, size: 18),
                     label: Text('ملف الفني'),
                     onPressed: () =>
-                        _navigateToTechnicianProfile(order.technicianId),
+                        _navigateToTechnicianProfile(null), // Need technicianId in OrderModel if mapping
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue[50],
                       foregroundColor: Colors.blue,

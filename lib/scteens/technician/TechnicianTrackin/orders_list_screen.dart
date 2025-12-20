@@ -65,14 +65,14 @@ class OrdersListScreen extends StatelessWidget {
 
   String _getStatusName(int? status) {
     switch (status) {
-      case 0: return "Pending";
-      case 1: return "Assigned";
-      case 2: return "Accepted";
-      case 3: return "In Progress";
-      case 4: return "Completed";
-      case 5: return "Cancelled";
-      case 6: return "Rejected";
-      default: return "Unknown";
+      case 0: return "قيد الانتظار";
+      case 1: return "تم التعيين";
+      case 2: return "مقبول";
+      case 3: return "قيد التنفيذ";
+      case 4: return "مكتمل";
+      case 5: return "ملغي";
+      case 6: return "مرفوض";
+      default: return "غير معروف";
     }
   }
 }

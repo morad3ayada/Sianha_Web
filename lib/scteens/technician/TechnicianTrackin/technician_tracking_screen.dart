@@ -1,5 +1,5 @@
-
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../financial/financial_service.dart';
 import '../../models/order_model.dart';
 import 'rejected/rejected_orders_screen.dart';
@@ -37,18 +37,27 @@ class _OrdersMainScreenState extends State<OrdersMainScreen> {
   Future<void> _fetchOrders() async {
     try {
       final orders = await _financialService.getAllOrders();
-      print("Fetched ${orders.length} orders"); // Debug print
+      
+      // Sort: Emergency ("خدمة طوارئ") first
+      orders.sort((a, b) {
+        final bool isEmergencyA = a.problemDescription?.contains("خدمة طوارئ") ?? false;
+        final bool isEmergencyB = b.problemDescription?.contains("خدمة طوارئ") ?? false;
+        if (isEmergencyA && !isEmergencyB) return -1; // A comes first
+        if (!isEmergencyA && isEmergencyB) return 1;  // B comes first
+        return 0; // Maintain original relative order
+      });
+      
+      print("Fetched ${orders.length} orders total");
+      final statusCounts = <int?, int>{};
+      for (var o in orders) {
+        statusCounts[o.orderStatus] = (statusCounts[o.orderStatus] ?? 0) + 1;
+        print("  - Order ${o.id}: Status ${o.orderStatus} (${o.customerName})");
+      }
+      print("Status Summary: $statusCounts");
 
       setState(() {
         _allOrders = orders;
         
-        // 1. Current Orders (All Existing Orders as per user request)
-        // _activeOrders variable now represents "Current" which equals ALL
-        _activeOrders = orders; 
-        
-        // 2. In Progress (Status == 3)
-        // Assuming user meant separate logic for this button
-         
         _completedOrders = orders.where((o) => o.orderStatus == 4).toList();
         _rejectedOrders = orders.where((o) => o.orderStatus == 6).toList();
         
@@ -72,7 +81,7 @@ class _OrdersMainScreenState extends State<OrdersMainScreen> {
       );
     }
 
-    final inProgressCount = _allOrders.where((o) => o.orderStatus == 3).length;
+    final inProgressCount = _allOrders.where((o) => [1, 2, 3].contains(o.orderStatus)).length;
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
@@ -123,71 +132,68 @@ class _OrdersMainScreenState extends State<OrdersMainScreen> {
               ),
 
               // 🚀 الأزرار (2 صفوف)
-              Expanded(
-                flex: 0,
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16),
-                  child: Column(
-                    children: [
-                       // Row 1: Current & In Progress
-                       Row(
-                         children: [
-                            _buildModernButton(
-                              context,
-                              'كل الطلبات', // "Current" as "All" per user
-                              '${_allOrders.length}',
-                              Icons.list,
-                              Colors.blue,
-                              'الكل',
-                              OrdersListScreen(title: "كل الطلبات", orders: _allOrders, themeColor: Colors.blue),
-                              isSmallScreen,
-                              isVerySmallScreen,
-                            ),
-                            SizedBox(width: 8),
-                            _buildModernButton(
-                              context,
-                              'قيد التنفيذ',
-                              '$inProgressCount',
-                              Icons.engineering,
-                              Colors.orange,
-                              'جار العمل',
-                              OrdersListScreen(title: "قيد التنفيذ", orders: _allOrders.where((o) => o.orderStatus == 3).toList(), themeColor: Colors.orange),
-                              isSmallScreen,
-                              isVerySmallScreen,
-                            ),
-                         ],
-                       ),
-                       SizedBox(height: 8),
-                       // Row 2: Completed & Rejected
-                       Row(
-                         children: [
-                            _buildModernButton(
-                              context,
-                              'منتهية',
-                              '${_completedOrders.length}',
-                              Icons.check_circle,
-                              Colors.green,
-                              'مكتملة',
-                              CompletedOrdersScreen(allOrders: _completedOrders),
-                              isSmallScreen,
-                              isVerySmallScreen,
-                            ),
-                            SizedBox(width: 8),
-                            _buildModernButton(
-                              context,
-                              'مرفوضة',
-                              '${_rejectedOrders.length}',
-                              Icons.cancel,
-                              Colors.red,
-                              'مرفوضة',
-                              RejectedOrdersMainScreen(rejectedOrders: _rejectedOrders),
-                              isSmallScreen,
-                              isVerySmallScreen,
-                            ),
-                         ],
-                       ),
-                    ],
-                  ),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  children: [
+                     // Row 1: Current & In Progress
+                     Row(
+                       children: [
+                          _buildModernButton(
+                            context,
+                            'كل الطلبات', // "Current" as "All" per user
+                            '${_allOrders.length}',
+                            Icons.list,
+                            Colors.blue,
+                            'الكل',
+                            OrdersListScreen(title: "كل الطلبات", orders: _allOrders, themeColor: Colors.blue),
+                            isSmallScreen,
+                            isVerySmallScreen,
+                          ),
+                          SizedBox(width: 8),
+                          _buildModernButton(
+                            context,
+                            'قيد التنفيذ',
+                            '$inProgressCount',
+                            Icons.engineering,
+                            Colors.orange,
+                            'جار العمل',
+                            OrdersListScreen(title: "قيد التنفيذ", orders: _allOrders.where((o) => [1, 2, 3].contains(o.orderStatus)).toList(), themeColor: Colors.orange),
+                            isSmallScreen,
+                            isVerySmallScreen,
+                          ),
+                       ],
+                     ),
+                     SizedBox(height: 8),
+                     // Row 2: Completed & Rejected
+                     Row(
+                       children: [
+                          _buildModernButton(
+                            context,
+                            'منتهية',
+                            '${_completedOrders.length}',
+                            Icons.check_circle,
+                            Colors.green,
+                            'مكتملة',
+                            CompletedOrdersScreen(allOrders: _completedOrders),
+                            isSmallScreen,
+                            isVerySmallScreen,
+                          ),
+                          SizedBox(width: 8),
+                          _buildModernButton(
+                            context,
+                            'مرفوضة',
+                            '${_rejectedOrders.length}',
+                            Icons.cancel,
+                            Colors.red,
+                            'مرفوضة',
+                            RejectedOrdersMainScreen(rejectedOrders: _rejectedOrders),
+                            isSmallScreen,
+                            isVerySmallScreen,
+                          ),
+                       ],
+                     ),
+                  ],
                 ),
               ),
 
@@ -217,27 +223,134 @@ class _OrdersMainScreenState extends State<OrdersMainScreen> {
                             itemCount: _allOrders.where((o) => o.orderStatus == 0).length,
                             itemBuilder: (context, index) {
                               final order = _allOrders.where((o) => o.orderStatus == 0).toList()[index];
-                              return PendingOrderCard(
-                                order: order,
-                                onShowTechnicians: () => _showTechniciansDialog(context, order),
-                                onAssign: () {
-                                  // Assign logic
-                                },
-                              );
-                            },
-                          ),
-                      ),
-                    ],
-                  ),
-                )
-               )
-
+                                return PendingOrderCard(
+                                  order: order,
+                                  onShowTechnicians: () => _showTechniciansDialog(context, order),
+                                  onDetails: () => _showOrderDetailsDialog(context, order),
+                                );
+                              },
+                            ),
+                        ),
+                      ],
+                    ),
+                  )
+                 )
+  
+              ],
+            );
+          },
+        ),
+      );
+    }
+  
+    void _showOrderDetailsDialog(BuildContext context, OrderModel order) {
+      showDialog(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+            title: Text("تفاصيل الطلب", style: TextStyle(fontWeight: FontWeight.bold)),
+            content: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                   _buildDetailRow(Icons.person, "اسم العميل", order.customerName),
+                   _buildDetailRow(Icons.phone, "رقم الهاتف", order.customerPhoneNumber),
+                   _buildDetailRow(Icons.attach_money, "السعر", "${order.price?.toStringAsFixed(0) ?? '0'} جنيه"),
+                   _buildDetailRow(Icons.location_on, "العنوان", order.address),
+                   _buildDetailRow(Icons.description, "وصف المشكلة", order.problemDescription),
+                   _buildDetailRow(Icons.info, "حالة الطلب", _getOrderStatusText(order.orderStatus)),
+                   
+                   if (order.problemImageUrl != null && order.problemImageUrl!.isNotEmpty) ...[
+                     SizedBox(height: 12),
+                     Text("صورة المشكلة:", style: TextStyle(fontWeight: FontWeight.bold)),
+                     SizedBox(height: 8),
+                     InkWell(
+                       onTap: () async {
+                         final Uri url = Uri.parse(order.problemImageUrl!);
+                         if (await canLaunchUrl(url)) {
+                           await launchUrl(url, mode: LaunchMode.externalApplication);
+                         } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text("تعذر فتح الرابط: ${order.problemImageUrl}")),
+                            );
+                         }
+                       },
+                       child: Container(
+                         padding: EdgeInsets.all(12),
+                         decoration: BoxDecoration(
+                           color: Colors.yellow[50], // Light background
+                           borderRadius: BorderRadius.circular(12),
+                           border: Border.all(color: Colors.yellow[700]!, width: 1),
+                         ),
+                         child: Row(
+                           mainAxisSize: MainAxisSize.min,
+                           children: [
+                             Icon(Icons.open_in_new, color: Colors.yellow[700]), // Changed icon
+                             SizedBox(width: 8),
+                             Text(
+                               "فتح الصورة في نافذة جديدة", // Changed text
+                               style: TextStyle(
+                                 color: Colors.yellow[700],
+                                 fontWeight: FontWeight.bold,
+                               ),
+                             ),
+                           ],
+                         ),
+                       ),
+                     ),
+                   ],
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                child: Text("إغلاق", style: TextStyle(color: Colors.red)),
+                onPressed: () => Navigator.pop(context),
+              ),
             ],
           );
         },
-      ),
-    );
-  }
+      );
+    }
+    
+
+  
+    Widget _buildDetailRow(IconData icon, String label, String? value) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6.0),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, size: 20, color: Colors.yellow[700]),
+            SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label, style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+                  Text(value ?? "غير متوفر", style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+  
+    String _getOrderStatusText(int? status) {
+      switch (status) {
+        case 0: return "قيد الانتظار";
+        case 1: return "تم التعيين";
+        case 2: return "مقبول";
+        case 3: return "قيد التنفيذ";
+        case 4: return "مكتمل";
+        case 5: return "ملغي";
+        case 6: return "مرفوض";
+        default: return "غير معروف ($status)";
+      }
+    }
 
   void _showTechniciansDialog(BuildContext context, OrderModel order) {
     showDialog(

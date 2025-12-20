@@ -120,7 +120,7 @@ class _BannedScreenState extends State<BannedScreen> {
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
                 color: Colors.white)),
-        backgroundColor: Colors.yellow[800],
+        backgroundColor: Colors.yellow[700],
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: Colors.white),

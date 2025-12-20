@@ -204,7 +204,7 @@ class _GovernoratesScreenState extends State<GovernoratesScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('إدارة المحافظات'),
-        backgroundColor: Colors.yellow[800],
+        backgroundColor: Colors.yellow[700],
         actions: [
           IconButton(
             icon: Icon(Icons.refresh),

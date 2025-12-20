@@ -9,6 +9,17 @@ class OrderModel {
   final String? governorateId;
   final String? areaName;
   final String? serviceCategoryName;
+  final String? title;
+  final String? createdAt;
+  final String? customerName;
+  final String? address;
+  final String? problemDescription;
+  final String? problemImageUrl;
+  final String? customerPhoneNumber;
+  final String? technicianName;
+  final String? technicianPhoneNumber;
+  final String? merchantName;
+  final String? merchantPhoneNumber;
   
   OrderModel({
     this.id,
@@ -21,20 +32,52 @@ class OrderModel {
     this.governorateId,
     this.areaName,
     this.serviceCategoryName,
+    this.title,
+    this.createdAt,
+    this.customerName,
+    this.address,
+    this.problemDescription,
+    this.problemImageUrl,
+    this.customerPhoneNumber,
+    this.technicianName,
+    this.technicianPhoneNumber,
+    this.merchantName,
+    this.merchantPhoneNumber,
   });
 
   factory OrderModel.fromJson(Map<String, dynamic> json) {
+    // Debug log to check what we are actually receiving for each order
+    if (json['customerPhoneNumber'] == null) {
+      print("DEBUG: Order ${json['id']} - customerPhoneNumber is NULL. Available keys: ${json.keys.toList()}");
+    } else {
+      print("DEBUG: Order ${json['id']} - Customer Phone: ${json['customerPhoneNumber']}");
+    }
+
     return OrderModel(
-      id: json['id'],
+      id: json['id']?.toString(),
       price: (json['price'] as num?)?.toDouble(),
-      governorateName: json['governorateName'],
-      payWay: json['payWay'],
-      orderStatus: json['orderStatus'] is int ? json['orderStatus'] : int.tryParse(json['orderStatus']?.toString() ?? ''),
+      governorateName: json['governorateName']?.toString(),
+      payWay: json['payWay'] is num ? (json['payWay'] as num).toInt() : null,
+      orderStatus: json['orderStatus'] is num 
+          ? (json['orderStatus'] as num).toInt() 
+          : int.tryParse(json['orderStatus']?.toString() ?? ''),
       date: json['date'],
       serviceCategoryId: json['serviceCategoryId'],
       governorateId: json['governorateId'],
       areaName: json['areaName'],
       serviceCategoryName: json['serviceCategoryName'],
+      title: json['title'],
+      createdAt: json['createdAt'],
+      customerName: json['customerName'],
+      address: json['address'],
+      problemDescription: json['problemDescription'],
+      problemImageUrl: json['problemImageUrl'],
+      customerPhoneNumber: json['customerPhoneNumber']?.toString(),
+      // Handle the 'technicia' spelling from Swagger if it's there
+      technicianName: (json['technicianName'] ?? json['techniciaName'])?.toString(),
+      technicianPhoneNumber: (json['technicianPhoneNumber'] ?? json['techniciaPhoneNumber'])?.toString(),
+      merchantName: json['merchantName']?.toString(),
+      merchantPhoneNumber: json['merchantPhoneNumber']?.toString(),
     );
   }
 }

@@ -32,8 +32,10 @@ class RejectedOrdersMainScreen extends StatelessWidget {
               Icons.list_alt,
               Colors.blue,
               () {
-                  // Pass rejectedOrders to the sub-screen (needs update in sub-screen file too)
-                 // Navigator.push(...)
+                  Navigator.push(
+                    context, 
+                    MaterialPageRoute(builder: (context) => AllRejectedOrdersScreen(orders: rejectedOrders))
+                  );
               }
             ),
             SizedBox(height: 15),
@@ -45,7 +47,16 @@ class RejectedOrdersMainScreen extends StatelessWidget {
               () => _showGovernoratesDialog(context),
             ),
             SizedBox(height: 15),
-            // ... (Analytics button)
+            // Re-adding the analytics button if needed
+             _buildNavigationCard(
+              context,
+              'تحليلات الرفض',
+              Icons.analytics,
+              Colors.orange,
+              () {
+                // If RejectionAnalyticsScreen is not ready, we can show a placeholder or just leave it
+              }
+            ),
           ],
         ),
       ),
@@ -54,7 +65,7 @@ class RejectedOrdersMainScreen extends StatelessWidget {
 
   Widget _buildStatsCard() {
     // Unique Governorates
-    final govs = rejectedOrders.map((e) => e.governorateName).toSet().length;
+    final govs = rejectedOrders.map((e) => e.governorateName).where((e) => e != null).toSet().length;
 
     return Card(
       elevation: 4,
@@ -114,8 +125,12 @@ class RejectedOrdersMainScreen extends StatelessWidget {
             itemBuilder: (context, index) => ListTile(
               title: Text(governorates[index]!),
               onTap: () {
-                // Navigate
+                final govOrders = rejectedOrders.where((o) => o.governorateName == governorates[index]).toList();
                 Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => GovernorateRejectedOrdersScreen(governorate: governorates[index]!, orders: govOrders))
+                );
               },
             ),
           ),

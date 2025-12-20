@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
-import '/scteens/technicians/technician_profile.dart';
-import 'rejected_order.dart';
+import '../../../../scteens/technicians/technician_profile.dart';
+import '../../../models/order_model.dart';
 
 // شاشة الطلبات المرفوضة حسب المحافظة
 class GovernorateRejectedOrdersScreen extends StatefulWidget {
   final String governorate;
+  final List<OrderModel> orders;
 
-  GovernorateRejectedOrdersScreen({required this.governorate});
+  GovernorateRejectedOrdersScreen({required this.governorate, required this.orders});
 
   @override
   _GovernorateRejectedOrdersScreenState createState() =>
@@ -15,7 +16,7 @@ class GovernorateRejectedOrdersScreen extends StatefulWidget {
 
 class _GovernorateRejectedOrdersScreenState
     extends State<GovernorateRejectedOrdersScreen> {
-  List<RejectedOrder> governorateOrders = [];
+  List<OrderModel> governorateOrders = [];
 
   @override
   void initState() {
@@ -24,37 +25,7 @@ class _GovernorateRejectedOrdersScreenState
   }
 
   void _loadGovernorateOrders() {
-    // محاكاة بيانات المحافظة
-    governorateOrders = [
-      RejectedOrder(
-        id: '1',
-        serviceType: 'كهرباء',
-        customerName: 'أحمد محمد',
-        customerPhone: '01234567891',
-        address: 'شارع النصر - حي الزهور',
-        governorate: widget.governorate,
-        center: 'مركز سوهاج',
-        rejectionReason: 'عدم توفر قطع غيار',
-        rejectionDate: DateTime.now().subtract(Duration(days: 1)),
-        requestDate: DateTime.now().subtract(Duration(days: 3)),
-        technicianId: 'tech001',
-        technicianName: 'محمد علي',
-      ),
-      RejectedOrder(
-        id: '2',
-        serviceType: 'سباكة',
-        customerName: 'فاطمة إبراهيم',
-        customerPhone: '01234567892',
-        address: 'شارع الجمهورية',
-        governorate: widget.governorate,
-        center: 'مركز جهينة',
-        rejectionReason: 'المكان بعيد',
-        rejectionDate: DateTime.now().subtract(Duration(days: 2)),
-        requestDate: DateTime.now().subtract(Duration(days: 4)),
-        technicianId: 'tech002',
-        technicianName: 'خالد محمود',
-      ),
-    ];
+    governorateOrders = widget.orders;
   }
 
   Widget _buildServiceIcon(String serviceType) {
@@ -85,34 +56,26 @@ class _GovernorateRejectedOrdersScreenState
     );
   }
 
-  String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year}';
-  }
-
-  void _navigateToTechnicianProfile(String technicianId) {
-    // جلب بيانات الفني من الطلبات أو من أي مصدر عندك
-    RejectedOrder order =
-        governorateOrders.firstWhere((o) => o.technicianId == technicianId);
-
-    Map<String, dynamic> technicianData = {
-      'id': order.technicianId,
-      'name': order.technicianName,
-      'serviceType': order.serviceType,
-      // ممكن تضيف باقي البيانات لو موجودة
-    };
-
+  void _navigateToTechnicianProfile(String? technicianId) {
+    if (technicianId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('ID الفني غير متوفر')),
+      );
+      return;
+    }
+    
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => TechnicianProfile(
-          userId: order.technicianId,
-          technicianId: order.technicianId,
+          userId: technicianId,
+          technicianId: technicianId,
         ),
       ),
     );
   }
 
-  Widget _buildOrderCard(RejectedOrder order) {
+  Widget _buildOrderCard(OrderModel order) {
     return Card(
       margin: EdgeInsets.only(bottom: 12),
       elevation: 3,
@@ -123,16 +86,16 @@ class _GovernorateRejectedOrdersScreenState
           children: [
             Row(
               children: [
-                _buildServiceIcon(order.serviceType),
+                _buildServiceIcon(order.serviceCategoryName ?? ""),
                 SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(order.serviceType,
+                      Text(order.serviceCategoryName ?? "خدمة غير محددة",
                           style: TextStyle(
                               fontWeight: FontWeight.bold, fontSize: 16)),
-                      Text(order.customerName),
+                      Text(order.customerName ?? "عميل مجهول"),
                     ],
                   ),
                 ),
@@ -145,14 +108,15 @@ class _GovernorateRejectedOrdersScreenState
             SizedBox(height: 10),
             Divider(),
             SizedBox(height: 10),
-            Text('المركز: ${order.center}'),
-            Text('سبب الرفض: ${order.rejectionReason}'),
-            Text('تاريخ الرفض: ${_formatDate(order.rejectionDate)}'),
+            Text('الهاتف: ${order.customerPhoneNumber ?? "غير متوفر"}'),
+            Text('المركز: ${order.areaName ?? "غير محدد"}'),
+            Text('الوصف: ${order.problemDescription ?? "لا يوجد وصف"}'),
+            Text('التاريخ: ${order.createdAt ?? "غير محدد"}'),
             SizedBox(height: 10),
             ElevatedButton.icon(
               icon: Icon(Icons.person, size: 18),
               label: Text('عرض ملف الفني'),
-              onPressed: () => _navigateToTechnicianProfile(order.technicianId),
+              onPressed: () => _navigateToTechnicianProfile(null),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blue[50],
                 foregroundColor: Colors.blue,

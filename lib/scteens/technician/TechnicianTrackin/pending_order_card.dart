@@ -1,18 +1,40 @@
-
 import 'package:flutter/material.dart';
 import '../../models/order_model.dart';
 
 class PendingOrderCard extends StatelessWidget {
   final OrderModel order;
   final VoidCallback onShowTechnicians;
-  final VoidCallback onAssign;
+  final VoidCallback onDetails;
 
   const PendingOrderCard({
     Key? key,
     required this.order,
     required this.onShowTechnicians,
-    required this.onAssign,
+    required this.onDetails,
   }) : super(key: key);
+
+  String _formatDate(String? dateStr) {
+    if (dateStr == null || dateStr.isEmpty) return 'N/A';
+    try {
+      final dt = DateTime.parse(dateStr);
+      String year = dt.year.toString();
+      String month = dt.month.toString().padLeft(2, '0');
+      String day = dt.day.toString().padLeft(2, '0');
+      
+      int hour = dt.hour;
+      int minute = dt.minute;
+      String amPm = hour >= 12 ? 'PM' : 'AM';
+      if (hour > 12) hour -= 12;
+      if (hour == 0) hour = 12;
+      
+      String hourStr = hour.toString().padLeft(2, '0');
+      String minuteStr = minute.toString().padLeft(2, '0');
+      
+      return "$year-$month-$day $hourStr:$minuteStr $amPm";
+    } catch (e) {
+      return dateStr;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,9 +49,12 @@ class PendingOrderCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  "طلب #${order.id}",
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                Expanded(
+                  child: Text(
+                    order.title ?? "طلب بدون عنوان",
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -45,9 +70,10 @@ class PendingOrderCard extends StatelessWidget {
               ],
             ),
             SizedBox(height: 8),
-            _buildRow(Icons.calendar_today, "التاريخ: ${order.date ?? 'N/A'}"),
-            _buildRow(Icons.monetization_on, "السعر: ${order.price?.toStringAsFixed(0) ?? '0'} جنيه"),
-            _buildRow(Icons.location_on, "المحافظة: ${order.governorateName ?? 'N/A'}"),
+            // Updated Date Display
+            _buildRow(Icons.calendar_today, "${_formatDate(order.createdAt)}"),
+            _buildRow(Icons.monetization_on, " ${order.price?.toStringAsFixed(0) ?? '0'} جنيه"),
+            _buildRow(Icons.location_on, " ${order.governorateName ?? 'N/A'}"),
             SizedBox(height: 12),
             Row(
               children: [
@@ -66,11 +92,11 @@ class PendingOrderCard extends StatelessWidget {
                 SizedBox(width: 8),
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: onAssign,
-                    icon: Icon(Icons.check_circle, size: 16),
-                    label: Text("تعيين"),
+                    onPressed: onDetails,
+                    icon: Icon(Icons.info_outline, size: 16),
+                    label: Text("تفاصيل"),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
+                      backgroundColor: Colors.amber[700], // Changed color to distinguish
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     ),
@@ -91,7 +117,7 @@ class PendingOrderCard extends StatelessWidget {
         children: [
           Icon(icon, size: 14, color: Colors.grey),
           SizedBox(width: 6),
-          Text(text, style: TextStyle(color: Colors.grey[700], fontSize: 14)),
+          Expanded(child: Text(text, style: TextStyle(color: Colors.grey[700], fontSize: 14), overflow: TextOverflow.ellipsis)),
         ],
       ),
     );

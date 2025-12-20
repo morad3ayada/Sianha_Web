@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '/scteens/models/order_model.dart';
-import '/scteens/financial/financial_service.dart';
+import '../models/order_model.dart';
+import 'financial_service.dart';
 
 // -----------------------------------------------------------------
 // 1. شاشة الدفع الإلكتروني المحدثة (Real Data)

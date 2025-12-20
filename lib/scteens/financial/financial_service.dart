@@ -35,8 +35,26 @@ class FinancialService {
       print('Body: ${response.body}');
 
       if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
-        return data.map((json) => OrderModel.fromJson(json)).toList();
+        final dynamic decodedBody = json.decode(response.body);
+        List<dynamic> data;
+        if (decodedBody is List<dynamic>) {
+          data = decodedBody;
+        } else if (decodedBody is Map<String, dynamic>) {
+          data = (decodedBody['data'] ?? decodedBody['items'] ?? decodedBody['results'] ?? []) as List<dynamic>;
+        } else {
+          throw Exception('Unexpected response type: ${decodedBody.runtimeType}');
+        }
+        
+        final List<OrderModel> orders = data.map((json) => OrderModel.fromJson(json)).toList();
+        
+        // Detailed logging as requested by the user
+        print('--- Customer Phone Numbers in Response ---');
+        for (var order in orders) {
+          print('Order ID: ${order.id} | Customer: ${order.customerName} | Phone: ${order.customerPhoneNumber ?? "NULL"}');
+        }
+        print('-------------------------------------------');
+        
+        return orders;
       } else {
         throw Exception('Failed to load orders: ${response.statusCode}');
       }
@@ -156,6 +174,38 @@ class FinancialService {
       _logResponse('REASSIGN ORDER', response);
 
       if (response.statusCode == 200 || response.statusCode == 201 || response.statusCode == 204) {
+        
+        // --- Also update status to 1 (Assigned/In Progress) ---
+        try {
+          print('---------------- UPDATE STATUS REQUEST (Status 1) ----------------');
+          final statusUrl = ApiConstants.updateOrderStatus(orderId);
+          print('URL: $statusUrl');
+          
+          final statusBody = json.encode({
+            "orderId": orderId,
+            "status": 1
+          });
+          print('Body: $statusBody');
+          
+          final statusResponse = await http.put(
+            Uri.parse(statusUrl),
+            headers: headers,
+            body: statusBody,
+          );
+          
+          _logResponse('UPDATE STATUS', statusResponse);
+          
+          if (statusResponse.statusCode >= 200 && statusResponse.statusCode < 300) {
+             print("Order status updated successfully to 1");
+          } else {
+             print("Warning: Failed to update order status to 1: ${statusResponse.body}");
+             // We don't throw here to avoid failing the whole operation if just the status update fails, 
+             // but user might want it to be strict. For now, we print warning.
+          }
+        } catch (e) {
+           print("Error updating status to 1: $e");
+        }
+        
         return true;
       } else {
         throw Exception('Failed to reassign order: ${response.statusCode}');

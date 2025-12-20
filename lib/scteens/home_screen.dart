@@ -1,22 +1,29 @@
 import 'package:flutter/material.dart';
 
 // استيراد الشاشات الأخرى
-import '/scteens/technicians/technicians_screen.dart';
+import 'technicians/technicians_screen.dart';
 import 'merchants/merchants_screen.dart';
 import 'complaints/complaints_screen.dart';
 import 'financial/financial_dashboard_screen.dart';
 import 'technician/TechnicianTrackin/technician_tracking_screen.dart';
 import 'merchant/merchant_tracking_screen.dart';
+import 'categories/categories_screen.dart';
+import 'categories/sub_categories_screen.dart';
+import 'reports/reports_screen.dart';
 import 'merchant/merchantorders/merchant_orders_screen.dart';
 import 'technician/technician_orders_screen.dart';
 import 'banned/banned_screen.dart';
 import 'delivery/delivery_screen.dart';
 
-import 'finishing/finishing_team_screen.dart';
 // استيراد شاشة العملاء (أنشئ هذا الملف لاحقاً)
 import 'customers/customers_screen.dart';
 import 'governorates/governorates_screen.dart';
 import 'areas/areas_screen.dart';
+import 'financial/profile_screen.dart';
+import 'financial/admins_screen.dart';
+import 'financial/auth_service.dart';
+import 'financial/user_service.dart';
+import 'login_screen.dart';
 
 class MainDashboard extends StatefulWidget {
   @override
@@ -25,6 +32,108 @@ class MainDashboard extends StatefulWidget {
 
 class _MainDashboardState extends State<MainDashboard> {
   int _selectedIndex = 0;
+  final AuthService _authService = AuthService();
+  final UserService _userService = UserService();
+  String _userName = 'جاري التحميل...';
+  String _userEmail = '...';
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchProfile();
+  }
+
+  Future<void> _fetchProfile() async {
+    try {
+      final data = await _userService.getProfile();
+      if (mounted) {
+        setState(() {
+          _userName = data['fullName'] ?? 'مسئول النظام';
+          _userEmail = data['email'] ?? 'Admin@system.com';
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _userName = 'مسئول النظام';
+          _userEmail = 'Admin@system.com';
+        });
+      }
+    }
+  }
+
+  Future<void> _showComingSoonDialog() async {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            const Text('تنبيه', style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(width: 10),
+            Icon(Icons.info_outline, color: Colors.yellow[800]),
+          ],
+        ),
+        content: const Text(
+          'يتم حالياً تحديث هذا القسم، وسيكون متاحاً قريباً جداً. شكراً لتفهمكم.',
+          textAlign: TextAlign.right,
+          style: TextStyle(fontSize: 16),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('حسناً', style: TextStyle(color: Colors.yellow[800], fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _logout() async {
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('تسجيل الخروج', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold)),
+        content: const Text('هل أنت متأكد من رغبتك في تسجيل الخروج؟', textAlign: TextAlign.center),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('إلغاء', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('خروج', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator(color: Colors.white)),
+      );
+
+      try {
+        await _authService.logout();
+      } finally {
+        if (mounted) {
+          // Remove loading indicator
+          Navigator.pop(context);
+          // Go to login screen
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => const LoginScreen()),
+            (route) => false,
+          );
+        }
+      }
+    }
+  }
 
   // قائمة العناصر الرئيسية
   final List<Map<String, dynamic>> _menuItems = [
@@ -62,19 +171,19 @@ class _MainDashboardState extends State<MainDashboard> {
           )
     },
     {
-      'title': 'متابعة تاجر',
-      'icon': Icons.inventory,
-      'builder': (context) => MerchantTrackingScreen()
+      'title': 'الأقسام الرئيسية',
+      'icon': Icons.category,
+      'builder': (context) => CategoriesScreen()
+    },
+    {
+      'title': 'الأقسام الفرعية',
+      'icon': Icons.subdirectory_arrow_right,
+      'builder': (context) => SubCategoriesScreen()
     },
     {
       'title': 'طلبات عمل تاجر',
       'icon': Icons.shopping_cart,
       'builder': (context) => MerchantOrdersScreen()
-    },
-    {
-      'title': 'طلبات عمل فنيين',
-      'icon': Icons.work,
-      'builder': (context) => TechnicianManagementScreen()
     },
     {
       'title': 'محظورين',
@@ -92,9 +201,19 @@ class _MainDashboardState extends State<MainDashboard> {
       'builder': (context) => AreasScreen()
     },
     {
-      'title': 'فريق التشطيب',
-      'icon': Icons.construction,
-      'builder': (context) => FinishingTeamScreen()
+      'title': 'التقييمات',
+      'icon': Icons.star,
+      'builder': (context) => ReportsScreen()
+    },
+    {
+      'title': 'الملف الشخصي',
+      'icon': Icons.person_outline,
+      'builder': (context) => ProfileScreen()
+    },
+    {
+      'title': 'المسؤولين',
+      'icon': Icons.admin_panel_settings_outlined,
+      'builder': (context) => AdminsScreen()
     },
   ];
 
@@ -166,10 +285,10 @@ class _MainDashboardState extends State<MainDashboard> {
                   child: Icon(Icons.person, size: 40, color: Colors.yellow[700]),
                 ),
                 SizedBox(height: 10),
-                Text('مسئول النظام',
+                Text(_userName,
                     style: TextStyle(
                         color: Colors.white, fontWeight: FontWeight.bold)),
-                Text('Admin@system.com',
+                Text(_userEmail,
                     style: TextStyle(color: Colors.white70, fontSize: 12)),
               ],
             ),
@@ -186,6 +305,10 @@ class _MainDashboardState extends State<MainDashboard> {
                   icon: item['icon'],
                   isSelected: _selectedIndex == index,
                   onTap: () {
+                    if (item['title'] == 'طلبات عمل تاجر') {
+                      _showComingSoonDialog();
+                      return;
+                    }
                     setState(() {
                       _selectedIndex = index;
                     });
@@ -205,7 +328,7 @@ class _MainDashboardState extends State<MainDashboard> {
             width: double.infinity,
             padding: EdgeInsets.all(16),
             child: ElevatedButton.icon(
-              onPressed: () {},
+              onPressed: _logout,
               icon: Icon(Icons.logout, size: 16),
               label: Text('تسجيل خروج'),
               style: ElevatedButton.styleFrom(
@@ -215,12 +338,31 @@ class _MainDashboardState extends State<MainDashboard> {
               ),
             ),
           ),
+          
+          // حقل المطور
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.code, size: 14, color: Colors.white.withOpacity(0.5)),
+                SizedBox(width: 5),
+                Text(
+                  'Developed by Morad3ayada',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.5),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 
-  // عنصر من عناصر القائمة
   Widget _buildMenuItem({
     required String title,
     required IconData icon,
@@ -229,16 +371,48 @@ class _MainDashboardState extends State<MainDashboard> {
     required BoxConstraints constraints,
   }) {
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      child: ListTile(
-        leading:
-            Icon(icon, color: isSelected ? Colors.yellow[700] : Colors.white70),
-        title: Text(title,
-            style:
-                TextStyle(color: isSelected ? Colors.yellow[700] : Colors.white)),
-        tileColor: isSelected ? Colors.white : Colors.transparent,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        onTap: onTap,
+      margin: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: isSelected ? Colors.white : Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: isSelected 
+          ? [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))]
+          : [],
+      ),
+      child: Stack(
+        children: [
+          ListTile(
+            leading: Icon(
+              icon, 
+              color: isSelected ? Colors.yellow[800] : Colors.white,
+              size: 22,
+            ),
+            title: Text(
+              title,
+              style: TextStyle(
+                color: isSelected ? Colors.black87 : Colors.white,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                fontSize: 14,
+              ),
+            ),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            onTap: onTap,
+            hoverColor: Colors.white.withOpacity(0.1),
+          ),
+          if (isSelected)
+            Positioned(
+              right: 0,
+              top: 12,
+              bottom: 12,
+              child: Container(
+                width: 4,
+                decoration: BoxDecoration(
+                  color: Colors.yellow[800],
+                  borderRadius: BorderRadius.horizontal(left: Radius.circular(4)),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

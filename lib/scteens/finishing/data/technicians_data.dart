@@ -1,4 +1,4 @@
-import '/scteens/models/technician_model.dart';
+import '../../models/technician_model.dart';
 
 class TechniciansData {
   static List<Governorate> governorates = [

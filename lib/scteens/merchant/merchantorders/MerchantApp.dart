@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'dart:io';
 
 void main() {
   runApp(MerchantApp());
@@ -39,7 +38,7 @@ class _AddMerchantScreenState extends State<AddMerchantScreen> {
 
   // المتغيرات
   String? _selectedGovernorate;
-  File? _storeImage;
+  dynamic _storeImage;
   String? _selectedSpecialization;
 
   // القوائم المنسدلة
@@ -357,7 +356,8 @@ class _AddMerchantScreenState extends State<AddMerchantScreen> {
                           )
                         : ClipRRect(
                             borderRadius: BorderRadius.circular(8),
-                            child: Image.file(_storeImage!, fit: BoxFit.cover),
+                            child: Image.network(_storeImage.path, fit: BoxFit.cover, // Placeholder for web if needed
+                              errorBuilder: (context, error, stackTrace) => Icon(Icons.image)),
                           ),
                   ),
                   SizedBox(height: 10),
@@ -495,7 +495,7 @@ class _AddMerchantScreenState extends State<AddMerchantScreen> {
         await _imagePicker.pickImage(source: ImageSource.camera);
     if (image != null) {
       setState(() {
-        _storeImage = File(image.path);
+        _storeImage = image;
       });
     }
   }
@@ -505,7 +505,7 @@ class _AddMerchantScreenState extends State<AddMerchantScreen> {
         await _imagePicker.pickImage(source: ImageSource.gallery);
     if (image != null) {
       setState(() {
-        _storeImage = File(image.path);
+        _storeImage = image;
       });
     }
   }

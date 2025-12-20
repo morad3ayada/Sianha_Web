@@ -252,7 +252,7 @@ class _AreasScreenState extends State<AreasScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('إدارة المناطق'),
-        backgroundColor: Colors.yellow[800],
+        backgroundColor: Colors.yellow[700],
         actions: [
           IconButton(
             icon: Icon(Icons.refresh),

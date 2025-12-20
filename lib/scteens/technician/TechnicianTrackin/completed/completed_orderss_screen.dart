@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import '../../../models/order_model.dart';
 import 'completed_order.dart';
 
 class CompletedOrdersScreen extends StatelessWidget {
   final String governorate;
   final String center;
-  final List<CompletedOrder> orders;
+  final List<OrderModel> orders;
 
   CompletedOrdersScreen({
     required this.governorate,
@@ -48,11 +49,7 @@ class CompletedOrdersScreen extends StatelessWidget {
     );
   }
 
-  String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year}';
-  }
-
-  Widget _buildOrderCard(CompletedOrder order) {
+  Widget _buildOrderCard(OrderModel order) {
     return Card(
       margin: EdgeInsets.only(bottom: 12),
       elevation: 3,
@@ -63,21 +60,21 @@ class CompletedOrdersScreen extends StatelessWidget {
           children: [
             Row(
               children: [
-                _buildServiceIcon(order.serviceType),
+                _buildServiceIcon(order.serviceCategoryName ?? ""),
                 SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(order.serviceType,
+                      Text(order.serviceCategoryName ?? "خدمة غير محددة",
                           style: TextStyle(
                               fontWeight: FontWeight.bold, fontSize: 16)),
-                      Text(order.customerName),
+                      Text(order.customerName ?? "عميل مجهول"),
                     ],
                   ),
                 ),
                 Chip(
-                  label: Text('${order.rating}',
+                  label: Text('5.0', // Placeholder rating
                       style: TextStyle(color: Colors.white)),
                   backgroundColor: Colors.amber,
                 ),
@@ -90,7 +87,7 @@ class CompletedOrdersScreen extends StatelessWidget {
               children: [
                 Icon(Icons.phone, size: 16, color: Colors.grey),
                 SizedBox(width: 5),
-                Text(order.customerPhone),
+                Text(order.customerPhoneNumber ?? "غير متوفر"),
               ],
             ),
             SizedBox(height: 5),
@@ -98,7 +95,7 @@ class CompletedOrdersScreen extends StatelessWidget {
               children: [
                 Icon(Icons.location_on, size: 16, color: Colors.grey),
                 SizedBox(width: 5),
-                Expanded(child: Text(order.address)),
+                Expanded(child: Text(order.address ?? "غير متوفر")),
               ],
             ),
             SizedBox(height: 5),
@@ -106,7 +103,7 @@ class CompletedOrdersScreen extends StatelessWidget {
               children: [
                 Icon(Icons.attach_money, size: 16, color: Colors.green),
                 SizedBox(width: 5),
-                Text('${order.price.toStringAsFixed(0)} جنيه'),
+                Text('${(order.price ?? 0).toStringAsFixed(0)} جنيه'),
               ],
             ),
             SizedBox(height: 5),
@@ -114,17 +111,17 @@ class CompletedOrdersScreen extends StatelessWidget {
               children: [
                 Icon(Icons.calendar_today, size: 16, color: Colors.grey),
                 SizedBox(width: 5),
-                Text('تم الانتهاء: ${_formatDate(order.completionDate)}'),
+                Text('تم الانتهاء: ${order.createdAt ?? "غير محدد"}'),
               ],
             ),
-            if (order.notes != null && order.notes!.isNotEmpty) ...[
+            if (order.problemDescription != null && order.problemDescription!.isNotEmpty) ...[
               SizedBox(height: 5),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Icon(Icons.note, size: 16, color: Colors.grey),
                   SizedBox(width: 5),
-                  Expanded(child: Text('ملاحظات: ${order.notes!}')),
+                  Expanded(child: Text('الوصف: ${order.problemDescription!}')),
                 ],
               ),
             ],
@@ -133,7 +130,7 @@ class CompletedOrdersScreen extends StatelessWidget {
               children: [
                 Icon(Icons.person, size: 16, color: Colors.blue),
                 SizedBox(width: 5),
-                Text('الفني: ${order.technicianName}'),
+                Text('الفني: ${order.technicianName ?? "غير محدد"}'),
               ],
             ),
           ],
