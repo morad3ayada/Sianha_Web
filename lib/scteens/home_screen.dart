@@ -62,34 +62,6 @@ class _MainDashboardState extends State<MainDashboard> {
     }
   }
 
-  Future<void> _showComingSoonDialog() async {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            const Text('تنبيه', style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(width: 10),
-            Icon(Icons.info_outline, color: Colors.yellow[800]),
-          ],
-        ),
-        content: const Text(
-          'يتم حالياً تحديث هذا القسم، وسيكون متاحاً قريباً جداً. شكراً لتفهمكم.',
-          textAlign: TextAlign.right,
-          style: TextStyle(fontSize: 16),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('حسناً', style: TextStyle(color: Colors.yellow[800], fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
-    );
-  }
-
   Future<void> _logout() async {
     final bool? confirm = await showDialog<bool>(
       context: context,
@@ -179,11 +151,6 @@ class _MainDashboardState extends State<MainDashboard> {
       'title': 'الأقسام الفرعية',
       'icon': Icons.subdirectory_arrow_right,
       'builder': (context) => SubCategoriesScreen()
-    },
-    {
-      'title': 'طلبات عمل تاجر',
-      'icon': Icons.shopping_cart,
-      'builder': (context) => MerchantOrdersScreen()
     },
     {
       'title': 'محظورين',
@@ -305,10 +272,6 @@ class _MainDashboardState extends State<MainDashboard> {
                   icon: item['icon'],
                   isSelected: _selectedIndex == index,
                   onTap: () {
-                    if (item['title'] == 'طلبات عمل تاجر') {
-                      _showComingSoonDialog();
-                      return;
-                    }
                     setState(() {
                       _selectedIndex = index;
                     });
