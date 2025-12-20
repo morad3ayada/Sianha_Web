@@ -1,0 +1,23 @@
+class Governorate {
+  final String id;
+  final String name;
+
+  Governorate({
+    required this.id,
+    required this.name,
+  });
+
+  factory Governorate.fromJson(Map<String, dynamic> json) {
+    return Governorate(
+      id: json['id'] ?? '',
+      name: json['name'] ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+    };
+  }
+}
