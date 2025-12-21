@@ -125,7 +125,81 @@ class FinancialService {
     return headers;
   }
 
-  Future<void> assignOrder(String s, String t, {String? reason}) async {}
+  Future<void> assignOrder(String orderId, String technicianId, {String? reason}) async {
+    try {
+      final String authToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2NDE4ZmYyOS02OTcyLTQ0MTAtOTdkOC01MGU1MjU5YzRhMmUiLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJBZG1pbiIsImp0aSI6ImRhYjNjNmFkLTYyYzAtNDcxYi1iZWY4LTE0YTk3MjVjYzI5ZCIsImV4cCI6MTc5NzY4MjAwNiwiaXNzIjoiTWFpbnRlbmFuY2VBUEkiLCJhdWQiOiJNYWludGVuYW5jZUNsaWVudCJ9.oVJKnnsBnpFBdzXVoarVxWXqeqhj6bJhM9u8u4BqdYM';
+      
+      final Map<String, String> headers = {
+        'accept': '*/*',
+        'Authorization': 'Bearer $authToken',
+        'Content-Type': 'application/json',
+      };
 
-  Future<void> reassignOrder(String s, String t, {String? reason}) async {}
+      final body = json.encode({
+        "technicianId": technicianId,
+        "reason": reason ?? "string"
+      });
+
+      print('---------------- ASSIGN ORDER REQUEST ----------------');
+      print('URL: ${ApiConstants.assignOrder}');
+      print('Body: $body');
+
+      final response = await http.post(
+        Uri.parse(ApiConstants.assignOrder),
+        headers: headers,
+        body: body,
+      ).timeout(Duration(seconds: 10));
+
+      print('---------------- ASSIGN ORDER RESPONSE ----------------');
+      print('Status Code: ${response.statusCode}');
+      print('Body: ${response.body}');
+
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        throw Exception('Failed to assign order: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error assigning order: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> reassignOrder(String orderId, String technicianId, {String? reason}) async {
+    try {
+      final String authToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2NDE4ZmYyOS02OTcyLTQ0MTAtOTdkOC01MGU1MjU5YzRhMmUiLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJBZG1pbiIsImp0aSI6ImRhYjNjNmFkLTYyYzAtNDcxYi1iZWY4LTE0YTk3MjVjYzI5ZCIsImV4cCI6MTc5NzY4MjAwNiwiaXNzIjoiTWFpbnRlbmFuY2VBUEkiLCJhdWQiOiJNYWludGVuYW5jZUNsaWVudCJ9.oVJKnnsBnpFBdzXVoarVxWXqeqhj6bJhM9u8u4BqdYM';
+      
+      final Map<String, String> headers = {
+        'accept': '*/*',
+        'Authorization': 'Bearer $authToken',
+        'Content-Type': 'application/json',
+      };
+
+      final body = json.encode({
+        "technicianId": technicianId,
+        "reason": reason ?? "string"
+      });
+
+      final String url = ApiConstants.reassignOrder(orderId);
+
+      print('---------------- REASSIGN ORDER REQUEST ----------------');
+      print('URL: $url');
+      print('Body: $body');
+
+      final response = await http.put(
+        Uri.parse(url),
+        headers: headers,
+        body: body,
+      ).timeout(Duration(seconds: 10));
+
+      print('---------------- REASSIGN ORDER RESPONSE ----------------');
+      print('Status Code: ${response.statusCode}');
+      print('Body: ${response.body}');
+
+      if (response.statusCode != 200 && response.statusCode != 204) {
+        throw Exception('Failed to reassign order: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error reassigning order: $e');
+      rethrow;
+    }
+  }
 }
