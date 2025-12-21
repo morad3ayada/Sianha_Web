@@ -10,6 +10,8 @@ import '/Total/Tiypscreen.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:html' as html;
+import '../financial/financial_service.dart';
+import '../models/order_model.dart';
 
 class TechnicianProfile extends StatefulWidget {
   final String userId;
@@ -28,6 +30,12 @@ class _TechnicianProfileState extends State<TechnicianProfile> {
   Map<String, dynamic>? technician;
   bool _isLoading = true;
   String? _errorMessage;
+  
+
+
+
+  List<OrderModel> _technicianOrders = [];
+  bool _isLoadingOrders = true;
 
   @override
   void initState() {
@@ -49,9 +57,27 @@ class _TechnicianProfileState extends State<TechnicianProfile> {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+        
+        // Parse orders from profile data if available
+        List<OrderModel> orders = [];
+        if (data['orders'] != null) {
+          orders = (data['orders'] as List)
+              .map((o) => OrderModel.fromJson(o))
+              .toList();
+          
+          // Sort by date descending
+          orders.sort((a, b) {
+            final dateA = DateTime.tryParse(a.createdAt ?? '') ?? DateTime(2000);
+            final dateB = DateTime.tryParse(b.createdAt ?? '') ?? DateTime(2000);
+            return dateB.compareTo(dateA);
+          });
+        }
+
         setState(() {
           technician = data;
+          _technicianOrders = orders;
           _isLoading = false;
+          _isLoadingOrders = false;
         });
       } else {
         setState(() {
@@ -66,6 +92,11 @@ class _TechnicianProfileState extends State<TechnicianProfile> {
       });
     }
   }
+
+
+
+
+
 
   Future<void> _toggleApproval(bool newValue) async {
     final currentApproval = technician!['approved'] ?? false;
@@ -189,10 +220,10 @@ class _TechnicianProfileState extends State<TechnicianProfile> {
     final String? workHoursTo = technician!['workHoursTo'];
     
     // Validating and parsing other fields if they exist in API or using defaults
-    final String rating = (technician!['rating'] ?? 4.5).toString();
-    final String completedJobs = (technician!['completedJobs'] ?? 0).toString();
-    final String experience = technician!['experience'] ?? '0 سنوات';
-    final String hourlyRate = technician!['hourlyRate'] ?? '0';
+    final String rating = (technician!['averageRating'] ?? technician!['rating'] ?? 0).toString();
+
+    final String totalOrders = (technician!['totalOrders'] ?? technician!['ordersCount'] ?? 0).toString();
+    final String completedJobs = _technicianOrders.where((o) => o.orderStatus == 4).length.toString();
     
     // Format work hours
     String workHours = 'غير محدد';
@@ -363,7 +394,7 @@ class _TechnicianProfileState extends State<TechnicianProfile> {
             ),
             SizedBox(height: 20),
 
-            // 📊 بطاقة المعلومات
+            // 📊 بطاقة الإحصائيات (التقييم وإجمالي الأوردرات)
             Card(
               elevation: 4,
               shape: RoundedRectangleBorder(
@@ -371,30 +402,12 @@ class _TechnicianProfileState extends State<TechnicianProfile> {
               ),
               child: Padding(
                 padding: EdgeInsets.all(20),
-                child: Column(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    _buildInfoRow(
-                        Icons.star, "التقييم", "$rating ⭐"),
-                    _buildInfoRow(Icons.work, "المهام المكتملة",
-                        "$completedJobs مهمة"),
-                    _buildInfoRow(Icons.schedule, "سنوات الخبرة",
-                        experience),
-                    _buildInfoRow(Icons.attach_money, "سعر الساعة",
-                        hourlyRate),
-                    _buildInfoRow(
-                        Icons.phone, "رقم الهاتف", phone),
-                    _buildInfoRow(
-                        Icons.location_on, "العنوان", address),
-                    _buildInfoRow(
-                        Icons.access_time, "ساعات العمل", workHours),
-                    _buildInfoRow(
-                      Icons.circle,
-                      "الحالة",
-                      (technician!["isActive"] == true) ? "نشط" : "غير نشط",
-                      color:
-                          (technician!["isActive"] == true) ? Colors.green : Colors.grey,
-                    ),
-                    _buildApprovalToggle(approved),
+                    _buildStatItem(Icons.star, "التقييم", "$rating ⭐", Colors.orange),
+                    Container(height: 40, width: 1, color: Colors.grey[300]),
+                    _buildStatItem(Icons.assignment, "إجمالي الأوردرات", totalOrders, Colors.blue),
                   ],
                 ),
               ),
@@ -561,197 +574,111 @@ class _TechnicianProfileState extends State<TechnicianProfile> {
             ),
             SizedBox(height: 25),
 
-            // 📞 أزرار الاتصال الأساسية
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    icon: Icon(Icons.phone, size: 20),
-                    label: Text("اتصال"),
-                    onPressed: () {
-                      _makePhoneCall(phone);
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green[700],
-                      foregroundColor: Colors.white,
-                      padding: EdgeInsets.symmetric(vertical: 15),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
+            // 📋 التفاصيل والمهام المكتملة (في آخر الصفحة)
+            Card(
+              elevation: 4,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Padding(
+                padding: EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "التفاصيل",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.yellow[900],
                       ),
                     ),
-                  ),
-                ),
-                SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    icon: Icon(Icons.message, size: 20),
-                    label: Text("رسالة"),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => MessageScreen(),
-                        ),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.yellow[700],
-                      foregroundColor: Colors.white,
-                      padding: EdgeInsets.symmetric(vertical: 15),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
-                      ),
+                    Divider(height: 24),
+                    _buildInfoRow(Icons.task_alt, "المهام المكتملة", "$completedJobs مهمة", color: Colors.green),
+                    _buildInfoRow(Icons.phone, "رقم الهاتف", phone),
+                    _buildInfoRow(Icons.location_on, "العنوان", address),
+                    _buildInfoRow(Icons.access_time, "ساعات العمل", workHours),
+                    _buildInfoRow(
+                      Icons.circle,
+                      "الحالة",
+                      (technician!["isActive"] == true) ? "نشط" : "غير نشط",
+                      color: (technician!["isActive"] == true) ? Colors.green : Colors.grey,
                     ),
-                  ),
+                    _buildApprovalToggle(approved),
+                  ],
                 ),
-              ],
+              ),
             ),
-            SizedBox(height: 12),
+            SizedBox(height: 20),
 
-            // ✏️ أزرار التعديل والإدارة
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    icon: Icon(Icons.edit, size: 20),
-                    label: Text("تعديل"),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => ShopDetails(technician: technician ?? {}),
-                        ),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange[700],
-                      foregroundColor: Colors.white,
-                      padding: EdgeInsets.symmetric(vertical: 15),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
+            // 📋 قائمة الأوردرات
+            Card(
+              elevation: 4,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Padding(
+                padding: EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "قائمة الأوردرات",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.yellow[900],
                       ),
                     ),
-                  ),
-                ),
-                SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    icon: Icon(Icons.assignment, size: 20),
-                    label: Text("المهام"),
-                    onPressed: () {
-                      _showPreviousTasks(context);
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.purple[700],
-                      foregroundColor: Colors.white,
-                      padding: EdgeInsets.symmetric(vertical: 15),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
+                    Divider(height: 24),
+                    if (_isLoadingOrders)
+                      Center(child: CircularProgressIndicator())
+                    else if (_technicianOrders.isEmpty)
+                      Center(child: Text("لا توجد أوردرات لهذا الفني", style: TextStyle(color: Colors.grey)))
+                    else
+                      ListView.separated(
+                        shrinkWrap: true,
+                        physics: NeverScrollableScrollPhysics(),
+                        itemCount: _technicianOrders.length,
+                        separatorBuilder: (context, index) => Divider(),
+                        itemBuilder: (context, index) {
+                          final order = _technicianOrders[index];
+                          return _buildOrderListItem(order);
+                        },
                       ),
-                    ),
-                  ),
+                  ],
                 ),
-              ],
+              ),
             ),
-            SizedBox(height: 12),
-
-            // 🚫 أزرار الحظر
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    icon: Icon(Icons.pause_circle_outline, size: 20),
-                    label: Text("حظر مؤقت"),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              TemporaryBanScreen(technician: technician ?? {}),
-                        ),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red[400],
-                      foregroundColor: Colors.white,
-                      padding: EdgeInsets.symmetric(vertical: 15),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                    ),
-                  ),
-                ),
-                SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    icon: Icon(Icons.block, size: 20),
-                    label: Text("حظر نهائي"),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              PermanentBanScreen(technician: technician ?? {}),
-                        ),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red[800],
-                      foregroundColor: Colors.white,
-                      padding: EdgeInsets.symmetric(vertical: 15),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 12),
-
-            // 📋 أزرار إضافية
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    icon: Icon(Icons.report, size: 18),
-                    label: Text("تقرير"),
-                    onPressed: () {
-                      _generateReport(context);
-                    },
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.grey[700],
-                      side: BorderSide(color: Colors.grey[400]!),
-                      padding: EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                    ),
-                  ),
-                ),
-                SizedBox(width: 12),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    icon: Icon(Icons.share, size: 18),
-                    label: Text("مشاركة"),
-                    onPressed: () {
-                      _shareTechnicianProfile(context);
-                    },
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.yellow[700],
-                      side: BorderSide(color: Colors.yellow[400]!),
-                      padding: EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            
+            SizedBox(height: 20),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildStatItem(IconData icon, String label, String value, Color color) {
+    return Column(
+      children: [
+        Icon(icon, color: color, size: 28),
+        SizedBox(height: 8),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
+          ),
+        ),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey[600],
+          ),
+        ),
+      ],
     );
   }
 
@@ -859,28 +786,6 @@ class _TechnicianProfileState extends State<TechnicianProfile> {
     );
   }
 
-  void _makePhoneCall(String phoneNumber) {
-    print("الاتصال بالرقم: $phoneNumber");
-  }
-
-  void _showPreviousTasks(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text("المهام السابقة"),
-          content:
-              Text("عرض قائمة المهام المنفذة من قبل ${technician?["fullName"] ?? ""}"),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text("إغلاق"),
-            ),
-          ],
-        );
-      },
-    );
-  }
 
   Widget _buildDocumentImageCard(String title, String url, IconData icon) {
     return InkWell(
@@ -1155,61 +1060,117 @@ class _TechnicianProfileState extends State<TechnicianProfile> {
             ],
           ),
         );
-      },
+
+},
     );
   }
 
-  void _generateReport(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text("تقرير الفني"),
-          content: Text("إنشاء تقرير مفصل عن أداء ${technician?["fullName"] ?? ""}"),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text("إلغاء"),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text("تم إنشاء التقرير بنجاح")),
-                );
-              },
-              child: Text("إنشاء التقرير"),
-            ),
-          ],
-        );
-      },
-    );
-  }
+  Widget _buildOrderListItem(OrderModel order) {
+    String status = "غير محدد";
+    Color color = Colors.grey;
+    
+    switch (order.orderStatus) {
+      case 0: status = "قيد الانتظار"; color = Colors.orange; break;
+      case 1: status = "تمت الموافقة"; color = Colors.blue; break;
+      case 2: status = "جاري العمل"; color = Colors.indigo; break;
+      case 3: status = "قيد التنفيذ"; color = Colors.purple; break;
+      case 4: status = "مكتمل"; color = Colors.green; break;
+      case 5: status = "ملغي"; color = Colors.red; break;
+      case 6: status = "مرفوض"; color = Colors.red[900]!; break;
+    }
 
-  void _shareTechnicianProfile(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text("مشاركة الملف"),
-          content: Text("مشاركة ملف الفني ${technician?["fullName"] ?? ""}"),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text("إلغاء"),
+    return Card(
+      margin: EdgeInsets.symmetric(vertical: 8),
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: ListTile(
+        contentPadding: EdgeInsets.all(12),
+        leading: Container(
+          padding: EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(Icons.assignment, color: color),
+        ),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              order.serviceCategoryName ?? 'طلب خدمة',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text("تم مشاركة الملف بنجاح")),
-                );
-              },
-              child: Text("مشاركة"),
+            if (order.customerName != null && order.customerName!.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 4.0),
+                child: Row(
+                  children: [
+                    Icon(Icons.person, size: 14, color: Colors.grey[600]),
+                    SizedBox(width: 4),
+                    Text(
+                      "${order.customerName}",
+                      style: TextStyle(fontSize: 14, color: Colors.grey[800], fontWeight: FontWeight.w500),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (order.problemDescription != null && order.problemDescription!.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6.0),
+                child: Container(
+                  padding: EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    order.problemDescription!,
+                    style: TextStyle(color: Colors.black87, fontSize: 13),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+            SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(Icons.calendar_today, size: 12, color: Colors.grey),
+                SizedBox(width: 4),
+                Text(order.createdAt?.split('T')[0] ?? '', style: TextStyle(fontSize: 12)),
+                Spacer(),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(status, style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 12)),
+                ),
+              ],
             ),
           ],
-        );
-      },
+        ),
+        trailing: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              "${order.price ?? 0}",
+              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green[800], fontSize: 16),
+            ),
+            Text(
+              "ج.م",
+              style: TextStyle(color: Colors.green[800], fontSize: 12),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

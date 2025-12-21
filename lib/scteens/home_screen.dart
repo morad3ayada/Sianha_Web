@@ -6,6 +6,7 @@ import 'merchants/merchants_screen.dart';
 import 'complaints/complaints_screen.dart';
 import 'financial/financial_dashboard_screen.dart';
 import 'technician/TechnicianTrackin/technician_tracking_screen.dart';
+import 'merchant/merchant_orders_monitoring_screen.dart'; // Added Import
 import 'merchant/merchant_tracking_screen.dart';
 import 'categories/categories_screen.dart';
 import 'categories/sub_categories_screen.dart';
@@ -141,6 +142,11 @@ class _MainDashboardState extends State<MainDashboard> {
             governorate: 'القاهرة',
             center: 'المعادي',
           )
+    },
+    {
+      'title': 'متابعة المتاجر',
+      'icon': Icons.storefront,
+      'builder': (context) => MerchantOrdersMonitoringScreen()
     },
     {
       'title': 'الأقسام الرئيسية',
