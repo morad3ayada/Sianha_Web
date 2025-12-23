@@ -1,5 +1,5 @@
 class ApiConstants {
-  static const String baseUrl = "https://anamelorg.runasp.net";
+  static const String baseUrl = "https://api.khidma.shop";
   
   // Auth Endpoints
   static const String login = "$baseUrl/api/Auth/login";
