@@ -21,6 +21,11 @@ class OrderModel {
   final String? merchantName;
   final String? merchantPhoneNumber;
   
+  // Fields from Reports API
+  final String? userName;
+  final String? description;
+  final String? userId;
+  
   OrderModel({
     this.id,
     this.price,
@@ -43,6 +48,9 @@ class OrderModel {
     this.technicianPhoneNumber,
     this.merchantName,
     this.merchantPhoneNumber,
+    this.userName,
+    this.description,
+    this.userId,
   });
 
   factory OrderModel.fromJson(Map<String, dynamic> json) {
@@ -78,6 +86,10 @@ class OrderModel {
       technicianPhoneNumber: (json['technicianPhoneNumber'] ?? json['techniciaPhoneNumber'])?.toString(),
       merchantName: json['merchantName']?.toString(),
       merchantPhoneNumber: json['merchantPhoneNumber']?.toString(),
+      // Reports API fields
+      userName: json['userName']?.toString(),
+      description: json['description']?.toString(),
+      userId: json['userId']?.toString(),
     );
   }
 }

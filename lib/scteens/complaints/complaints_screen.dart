@@ -20,31 +20,69 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
   }
 
   Future<void> _fetchComplaints() async {
-    try {
-      final allOrders = await _financialService.getAllOrders();
-      // Filter strictly for address == "شكوي من الخدمة"
-      final complaints = allOrders.where((order) => order.address == "شكوي من الخدمة").toList();
-      
-      setState(() {
-        _complaints = complaints;
-        _isLoading = false;
-      });
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
 
-      // Log specific complaints data as requested
-      print("--- [LOG] Complaints Data (${complaints.length} found) ---");
-      for (var complaint in complaints) {
-        print("Complaint ID: ${complaint.id}");
-        print("Customer: ${complaint.customerName}");
-        print("Phone: ${complaint.customerPhoneNumber ?? 'NULL'}");
-        print("Service: ${complaint.serviceCategoryName}");
-        print("Description: ${complaint.problemDescription}");
-        print("------------------------------------------");
-      }
+    List<OrderModel> complaintsFromOrders = [];
+    List<OrderModel> allReports = [];
+    String? ordersError;
+    String? reportsError;
+
+    // Fetch from Orders endpoint
+    try {
+      print("=== Fetching from Orders API ===");
+      final allOrders = await _financialService.getAllOrders();
+      complaintsFromOrders = allOrders.where((order) => order.address == "شكوي من الخدمة").toList();
+      print("✓ Orders fetched successfully: ${complaintsFromOrders.length} complaints found");
     } catch (e) {
-      setState(() {
-        _errorMessage = e.toString();
-        _isLoading = false;
-      });
+      ordersError = "خطأ في Orders: $e";
+      print("✗ Error fetching orders: $e");
+    }
+
+    // Fetch from Reports endpoint
+    try {
+      print("=== Fetching from Reports API ===");
+      allReports = await _financialService.getReports();
+      print("✓ Reports fetched successfully: ${allReports.length} reports found");
+    } catch (e) {
+      reportsError = "خطأ في Reports: $e";
+      print("✗ Error fetching reports: $e");
+    }
+
+    // Combine both lists
+    final combinedComplaints = [...complaintsFromOrders, ...allReports];
+    
+    setState(() {
+      _complaints = combinedComplaints;
+      _isLoading = false;
+      
+      // Set error message only if both failed
+      if (ordersError != null && reportsError != null) {
+        _errorMessage = "فشل تحميل البيانات من كلا المصدرين:\n$ordersError\n$reportsError";
+      } else if (ordersError != null || reportsError != null) {
+        // Partial error - show warning but still display available data
+        _errorMessage = null; // Don't block the UI
+        print("⚠ Partial data loaded: ${ordersError ?? reportsError}");
+      }
+    });
+
+    // Log summary
+    print("=== COMPLAINTS SUMMARY ===");
+    print("From Orders: ${complaintsFromOrders.length}");
+    print("From Reports: ${allReports.length}");
+    print("Total Combined: ${combinedComplaints.length}");
+    print("========================");
+    
+    // Log individual complaints
+    for (var complaint in combinedComplaints) {
+      print("Complaint ID: ${complaint.id}");
+      print("Customer: ${complaint.customerName}");
+      print("Phone: ${complaint.customerPhoneNumber ?? 'NULL'}");
+      print("Service: ${complaint.serviceCategoryName}");
+      print("Description: ${complaint.problemDescription}");
+      print("------------------------------------------");
     }
   }
 
@@ -150,6 +188,9 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
   }
 
   Widget _buildComplaintCard(OrderModel complaint) {
+    // Detect if this is from Reports API (has userName) or Orders API (has customerName)
+    final bool isFromReports = complaint.userName != null;
+    
     return Card(
       elevation: 2,
       margin: EdgeInsets.only(bottom: 12),
@@ -159,7 +200,7 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header: Customer Name and Date
+            // Header: Name and Date
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -169,7 +210,9 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
                       Icon(Icons.person, size: 18, color: Colors.grey[600]),
                       SizedBox(width: 4),
                       Text(
-                        complaint.customerName ?? "عميل غير معروف",
+                        isFromReports 
+                            ? (complaint.userName ?? "مستخدم غير معروف")
+                            : (complaint.customerName ?? "عميل غير معروف"),
                         style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                       ),
                     ],
@@ -183,36 +226,53 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
             ),
             Divider(height: 24),
             
-            // Problem Description (The Complaint)
+            // Title (for Reports) or "نص الشكوى" (for Orders)
+            if (isFromReports && complaint.title != null) ...[
+              Text(
+                "العنوان:",
+                style: TextStyle(fontSize: 12, color: Colors.red[300], fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 4),
+              Text(
+                complaint.title!,
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+              ),
+              SizedBox(height: 12),
+            ],
+            
+            // Description/Problem Description
             Text(
-              "نص الشكوى:",
+              isFromReports ? "الوصف:" : "نص الشكوى:",
               style: TextStyle(fontSize: 12, color: Colors.red[300], fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 4),
             Text(
-              complaint.problemDescription ?? "لا يوجد وصف للشكوى",
+              isFromReports 
+                  ? (complaint.description ?? "لا يوجد وصف")
+                  : (complaint.problemDescription ?? "لا يوجد وصف للشكوى"),
               style: TextStyle(fontSize: 14, height: 1.4),
             ),
             
             SizedBox(height: 16),
             
-            // Footer Details
-            Container(
-              padding: EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.grey[50], // Very light background for details
-                borderRadius: BorderRadius.circular(8),
+            // Footer Details - Only show for Orders (not Reports)
+            if (!isFromReports)
+              Container(
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[50],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  children: [
+                    _buildMiniDetailRow(Icons.category, "الخدمة:", complaint.serviceCategoryName),
+                    SizedBox(height: 6),
+                    _buildMiniDetailRow(Icons.location_on, "الموقع:", "${complaint.governorateName ?? '-'} / ${complaint.areaName ?? '-'}"),
+                    SizedBox(height: 6),
+                    _buildMiniDetailRow(Icons.phone, "الهاتف:", complaint.customerPhoneNumber),
+                  ],
+                ),
               ),
-              child: Column(
-                children: [
-                  _buildMiniDetailRow(Icons.category, "الخدمة:", complaint.serviceCategoryName),
-                  SizedBox(height: 6),
-                  _buildMiniDetailRow(Icons.location_on, "الموقع:", "${complaint.governorateName ?? '-'} / ${complaint.areaName ?? '-'}"),
-                  SizedBox(height: 6),
-                  _buildMiniDetailRow(Icons.phone, "الهاتف:", complaint.customerPhoneNumber),
-                ],
-              ),
-            ),
           ],
         ),
       ),

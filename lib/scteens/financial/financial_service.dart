@@ -65,6 +65,78 @@ class FinancialService {
     }
   }
 
+  Future<List<OrderModel>> getReports() async {
+    try {
+      // Use the specific authorization token
+      const String authToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2NDE4ZmYyOS02OTcyLTQ0MTAtOTdkOC01MGU1MjU5YzRhMmUiLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJBZG1pbiIsImp0aSI6ImRhYjNjNmFkLTYyYzAtNDcxYi1iZWY4LTE0YTk3MjVjYzI5ZCIsImV4cCI6MTc5NzY4MjAwNiwiaXNzIjoiTWFpbnRlbmFuY2VBUEkiLCJhdWQiOiJNYWludGVuYW5jZUNsaWVudCJ9.oVJKnnsBnpFBdzXVoarVxWXqeqhj6bJhM9u8u4BqdYM';
+      
+      final Map<String, String> headers = {
+        'accept': 'text/plain',
+        'Authorization': 'Bearer $authToken',
+      };
+
+      print('---------------- API REQUEST (REPORTS) ----------------');
+      print('URL: ${ApiConstants.reports}');
+      print('Headers: $headers');
+
+      final response = await http.get(
+        Uri.parse(ApiConstants.reports),
+        headers: headers,
+      ).timeout(Duration(seconds: 10)); // Add 10s timeout
+
+      print('---------------- API RESPONSE (REPORTS) ----------------');
+      print('Status Code: ${response.statusCode}');
+      print('Response Body Length: ${response.body.length} characters');
+      print('First 500 chars: ${response.body.length > 500 ? response.body.substring(0, 500) : response.body}');
+
+      if (response.statusCode == 200) {
+        final dynamic decodedData = json.decode(response.body);
+        print('Decoded Data Type: ${decodedData.runtimeType}');
+        
+        // Check if the response is a Map (object) or List (array)
+        if (decodedData is List) {
+          // Direct array response
+          print('✓ Direct array response with ${decodedData.length} items');
+          final reports = decodedData.map((json) => OrderModel.fromJson(json)).toList();
+          print('✓ Successfully parsed ${reports.length} reports');
+          return reports;
+        } else if (decodedData is Map<String, dynamic>) {
+          // Object response - try to find the reports array
+          print('Response is an object with keys: ${decodedData.keys.toList()}');
+          
+          // Common keys: 'data', 'reports', 'items', 'results'
+          final List<dynamic>? reportsList = decodedData['data'] ?? 
+                                            decodedData['reports'] ?? 
+                                            decodedData['items'] ?? 
+                                            decodedData['results'];
+          
+          if (reportsList != null) {
+            print('✓ Found reports array with ${reportsList.length} items');
+            final reports = reportsList.map((json) => OrderModel.fromJson(json)).toList();
+            print('✓ Successfully parsed ${reports.length} reports');
+            return reports;
+          } else {
+            print('✗ ERROR: Could not find reports array in response. Keys: ${decodedData.keys}');
+            throw Exception('Invalid response format: reports array not found');
+          }
+        } else {
+          print('✗ ERROR: Unexpected response type: ${decodedData.runtimeType}');
+          throw Exception('Unexpected response type: ${decodedData.runtimeType}');
+        }
+      } else {
+        print('✗ ERROR: HTTP ${response.statusCode}');
+        print('Error Body: ${response.body}');
+        throw Exception('Failed to load reports: ${response.statusCode}');
+      }
+    } on TimeoutException catch (_) {
+        print('✗ ERROR: Connection timeout');
+        throw Exception('Connection timed out. Please check your internet connection.');
+    } catch (e) {
+      print('✗ ERROR: Exception in getReports: $e');
+      rethrow;
+    }
+  }
+
   Future<List<UserModel>> getTechnicians() async {
     try {
       final headers = await _getHeaders();
